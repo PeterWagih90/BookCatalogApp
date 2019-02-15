@@ -16,6 +16,7 @@ import requests
 
 # import logger
 import logging
+
 # No handlers could be found for logger "sqlalchemy.pool.NullPool"
 logging.basicConfig()
 
@@ -41,7 +42,8 @@ APPLICATION_NAME = 'Book Catalog App'
 engine = create_engine('sqlite:///BookCatalog.db')
 Base.metadata.bind = engine
 
-# for test only as flask using threads and can't excute database queries from other than created thread
+
+# for test only as flask using threads and sql won't execute database queries from other than created thread
 # DBSession = sessionmaker(bind=engine)
 # session = DBSession()
 # .... do somthing
@@ -83,22 +85,22 @@ def createUser():
 
     if login_session.has_key('img'):
         url = login_session['img']
-    provider = login_session['provider'] ## google only for now
+    provider = login_session['provider']  # google only for now
     newUser = User(name=name, email=email, image=url, provider=provider)
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
     session.add(newUser)
     session.commit()
-    session.close()
+    session.close()  # always close session avoiding thread changing between requests
 
 
 def new_state():
     if login_session.has_key('state'):
         state = login_session['state']
-    else :
+    else:
         state = ''.join(random.choice(string.ascii_uppercase +
-                                  string.digits) for x in xrange(32))
-        #print "new session created : %s " % state
+                                      string.digits) for x in xrange(32))
+        # print "new session created : %s " % state
         login_session['state'] = state
 
     return state
@@ -107,7 +109,7 @@ def new_state():
 def queryAllBooks():
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-    books= session.query(BookDB).all()
+    books = session.query(BookDB).all()
     session.close()
     return books
 
@@ -400,35 +402,9 @@ def deleteBook(category, bookId):
                                login_session=login_session)
 
 
-# JSON Endpoints
-
-@app.route('/books.json/')
-def booksJSON():
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-    books = session.query(BookDB).all()
-    session.close()
-    return jsonify(Books=[book.serialize for book in books])
-
-
-@app.route('/books/category/<string:category>.json/')
-def bookCategoryJSON(category):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-    books = session.query(BookDB).filter_by(category=category).all()
-    session.close()
-    return jsonify(Books=[book.serialize for book in books])
-
-
-@app.route('/books/category/<string:category>/<int:bookId>.json/')
-def bookJSON(category, bookId):
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-    book = session.query(BookDB).filter_by(category=category,
-                                           id=bookId).first()
-    session.close()
-    return jsonify(Book=book.serialize)
-
+# ===================
+# Google Signing
+# ===================
 
 # google signin function
 
@@ -445,7 +421,8 @@ def gConnect():
     code = request.data
     try:
         # Upgrade the authorization code into a credentials object
-        oauth_flow = flow_from_clientsecrets('client_secret.json', scope='https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid')
+        oauth_flow = flow_from_clientsecrets('client_secret.json',
+                                             scope='https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid')
         print "i'm here third"
         oauth_flow.redirect_uri = 'postmessage'
         print "i'm here Fifth"
@@ -510,8 +487,7 @@ def gConnect():
     answer = requests.get(userinfo_url, params=params)
 
     data = answer.json()
-    #print data
-
+    # print data
 
     # ADD PROVIDER TO LOGIN SESSION
     if not data.has_key('name'):
@@ -588,8 +564,69 @@ def gdisconnect():
         return response
 
 
+# ===================
+# JSON Endpoints
+# ===================
+
+@app.route('/books.json/')
+def booksJSON():
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    books = session.query(BookDB).all()
+    session.close()
+    return jsonify(Books=[book.serialize for book in books])
+
+
+@app.route('/books/category/<string:category>.json/')
+def bookCategoryJSON(category):
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    books = session.query(BookDB).filter_by(category=category).all()
+    session.close()
+    return jsonify(Books=[book.serialize for book in books])
+
+
+@app.route('/books/category/<string:category>/<int:bookId>.json/')
+def bookJSON(category, bookId):
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    book = session.query(BookDB).filter_by(category=category,
+                                           id=bookId).first()
+    session.close()
+    return jsonify(Book=book.serialize)
+
+
+@app.route('/booksByCategories.json/')
+def allBooksByCategoryJSON():
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    books = session.query(BookDB).all()
+    categoriesArray = {}
+    for book in books:
+        if not categoriesArray.has_key(book.category):
+            arraOfBooks = [book.serialize]  # new
+            categoriesArray[book.category] = arraOfBooks
+        else:
+            categoriesArray.get(book.category).append(book.serialize)
+    session.close()
+    return jsonify(Books=categoriesArray)
+
+
+@app.route('/catalog/categories.json/')
+def categoriesJSON():
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    books = session.query(BookDB).all()
+    session.close()
+    categoriesArray = []
+    for book in books:
+        if not categoriesArray.__contains__(book.category):
+            categoriesArray.append(book.category)
+    return jsonify(categories=categoriesArray)
+
+
 if __name__ == '__main__':
-    app.run()
-    # app.debug = True
+    app.debug = True
+    # app.run()
     # app.run(host='', port=5000)
-    # app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5000)
