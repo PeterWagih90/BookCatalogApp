@@ -13,17 +13,16 @@ import string
 import httplib2
 import json
 import requests
+# importing oauth
+
+from oauth2client.client import flow_from_clientsecrets
+from oauth2client.client import FlowExchangeError
 
 # import logger
 import logging
 
 # Fix No handlers could be found for logger "sqlalchemy.pool.NullPool"
 logging.basicConfig()
-
-# importing oauth
-
-from oauth2client.client import flow_from_clientsecrets
-from oauth2client.client import FlowExchangeError
 
 # app configuration
 
@@ -43,7 +42,8 @@ engine = create_engine('sqlite:///BookCatalog.db')
 Base.metadata.bind = engine
 
 
-# for test only as flask using threads and sql won't execute database queries from other than created thread
+# for test only as flask using threads and sql won't
+# execute database queries from other than created thread
 # DBSession = sessionmaker(bind=engine)
 # session = DBSession()
 # .... do somthing
@@ -76,14 +76,14 @@ def check_admin():
 # Add new user into database
 
 def createUser():
-    if login_session.has_key('name'):
+    if 'name' in login_session.keys():
         name = login_session['name']
     else:
         name = "No Name"
 
     email = login_session['email']
 
-    if login_session.has_key('img'):
+    if 'img' in login_session.keys():
         url = login_session['img']
     provider = login_session['provider']  # google only for now
     newUser = User(name=name, email=email, image=url, provider=provider)
@@ -91,11 +91,13 @@ def createUser():
     session = DBSession()
     session.add(newUser)
     session.commit()
-    session.close()  # always close session avoiding thread changing between requests
+    # always close session avoiding
+    # thread changing between requests
+    session.close()
 
 
 def new_state():
-    if login_session.has_key('state'):
+    if 'state' in login_session.keys():
         state = login_session['state']
     else:
         state = ''.join(random.choice(string.ascii_uppercase +
@@ -267,7 +269,7 @@ def editBookDetails(category, bookId):
             admin = check_admin()
             admin_id = -1  # no admin inserted
             if admin is not None:
-                admin_id = admin.id   # admin inserted we need to know id
+                admin_id = admin.id  # admin inserted we need to know id
 
             # check if book owner is same as logged in user or admin or not
 
@@ -430,11 +432,16 @@ def gConnect():
     code = request.data
     try:
         # Upgrade the authorization code into a credentials object
+        # Style done like that for PEP8
         oauth_flow = flow_from_clientsecrets('client_secret.json',
-                                             scope='https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email openid')
-        print "i'm here third"
+                                             scope='https:'
+                                                   '//www.googleapis.com/'
+                                                   'auth/userinfo.profile '
+                                                   'https:'
+                                                   '//www.googleapis.com/'
+                                                   'auth/userinfo.email'
+                                                   ' openid')
         oauth_flow.redirect_uri = 'postmessage'
-        print "i'm here Fifth"
         credentials = oauth_flow.step2_exchange(code)
     except FlowExchangeError:
         response = make_response(
@@ -499,10 +506,12 @@ def gConnect():
     # print data
 
     # ADD PROVIDER TO LOGIN SESSION
-    if not data.has_key('name'):
+
+    if 'name' not in data:
         login_session['name'] = 'No Name'
     else:
         login_session['name'] = data['name']
+
     login_session['img'] = data['picture']
     login_session['email'] = data['email']
     login_session['provider'] = 'google'
@@ -612,7 +621,7 @@ def allBooksByCategoryJSON():
     books = session.query(BookDB).all()
     categoriesArray = {}
     for book in books:
-        if not categoriesArray.has_key(book.category):
+        if book.category not in categoriesArray:
             arraOfBooks = [book.serialize]  # new
             categoriesArray[book.category] = arraOfBooks
         else:
