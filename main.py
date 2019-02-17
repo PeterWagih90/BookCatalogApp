@@ -17,7 +17,7 @@ import requests
 # import logger
 import logging
 
-# No handlers could be found for logger "sqlalchemy.pool.NullPool"
+# Fix No handlers could be found for logger "sqlalchemy.pool.NullPool"
 logging.basicConfig()
 
 # importing oauth
@@ -264,7 +264,10 @@ def editBookDetails(category, bookId):
             description = request.form['bookDescription']
             bookCategory = request.form['category']
             user_id = check_user().id
-            admin_id = check_admin().id
+            admin = check_admin()
+            admin_id = -1  # no admin inserted
+            if admin is not None:
+                admin_id = admin.id   # admin inserted we need to know id
 
             # check if book owner is same as logged in user or admin or not
 
@@ -317,7 +320,10 @@ def editBookDetails(category, bookId):
         if 'provider' in login_session and login_session['provider'] \
                 != 'null':
             user_id = check_user().id
-            admin_id = check_admin().id
+            admin = check_admin()
+            admin_id = -1  # no admin inserted
+            if admin is not None:
+                admin_id = admin.id  # admin inserted we need to know id
             if user_id == book.user_id or user_id == admin_id:
                 book.description = book.description.replace('<br>', '\n')
                 return render_template(
@@ -371,7 +377,10 @@ def deleteBook(category, bookId):
         if 'provider' in login_session and login_session['provider'] \
                 != 'null':
             user_id = check_user().id
-            admin_id = check_admin().id
+            admin = check_admin()
+            admin_id = -1  # no admin inserted
+            if admin is not None:
+                admin_id = admin.id  # admin inserted we need to know id
             if user_id == book.user_id or user_id == admin_id:
                 session.delete(book)
                 session.commit()
