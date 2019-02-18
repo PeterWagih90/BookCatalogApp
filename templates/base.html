@@ -36,12 +36,17 @@
             <!-- Navigation. We hide it in small screens. -->
             <nav class="mdl-navigation mdl-layout--large-screen-only">
               {% if currentPage == 'main' %}
-                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Fiction')}}">Fiction</a>
-                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Horror')}}">Horror</a>
-                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Mystery')}}">Mystery</a>
-                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Romance')}}">Romance</a>
-                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Fantasy')}}">Fantasy</a>
-                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Other')}}">Other</a>
+                  {% for categori in categories %}
+                      <a class="mdl-navigation__link" href="{{url_for('sortBooks', category=categori.id)}}">{{ categori.name }}</a>
+
+
+                  {% endfor %}
+{#                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Fiction')}}">Fiction</a>#}
+{#                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Horror')}}">Horror</a>#}
+{#                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Mystery')}}">Mystery</a>#}
+{#                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Romance')}}">Romance</a>#}
+{#                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Fantasy')}}">Fantasy</a>#}
+{#                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Other')}}">Other</a>#}
               {% endif %}
                 <!-- Colored raised button -->
                 <button id="googleSignInCustom" class="mdl-button mdl-js-button mdl-button--raised mdl-button--colored mdl-js-ripple-effect mdl-color--white login-button-color signInButton">Login</button>

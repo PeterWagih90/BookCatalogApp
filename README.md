@@ -80,11 +80,11 @@ Book Catalog JSON: `/books.json/`
 Book Catalog By Category: `/booksByCategories.json/`
     - Displays all available books under each category
 	
-Books for single Category: `/books/category/<string:category>.json/`
+Books for single Category: `/books/category/<int:category_id>.json/`
     - Displays all books under specific category
 
-Book By Category: `/books/category/<string:category>/<int:bookId>.json/`
-    - Display Book Information using category and book id
+Book By Category: `/books/category/<int:category_id>/<int:bookId>.json/`
+    - Display Book Information using category_id and book id
 
 Categories : `/catalog/categories.json/`
     - Displays Categories 

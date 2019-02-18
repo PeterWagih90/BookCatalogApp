@@ -7,7 +7,7 @@ from flask import make_response
 # importing SqlAlchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from database_setup import Base, BookDB, User
+from database_setup import Base, BookDB, User, Category
 import random
 import string
 import httplib2
@@ -116,6 +116,30 @@ def queryAllBooks():
     return books
 
 
+def queryAllCategories():
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    categories = session.query(Category).all()
+    session.close()
+    return categories
+
+
+def getCategorey(categorey_Id):
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    categorey = session.query(Category).filter_by(id=categorey_Id).first()
+    session.close()
+    return categorey
+
+
+def getCategoreyId(categorey_name):
+    DBSession = sessionmaker(bind=engine)
+    session = DBSession()
+    categorey = session.query(Category).filter_by(name=categorey_name).first()
+    session.close()
+    return categorey
+
+
 # App Routes
 
 # main page
@@ -126,7 +150,8 @@ def showBooks():
     books = queryAllBooks()
     state = new_state()
     return render_template('main.html', books=books, currentPage='main',
-                           state=state, login_session=login_session)
+                           state=state, login_session=login_session,
+                           categories=queryAllCategories())
 
 
 # To add new book
@@ -144,17 +169,19 @@ def newBook():
             coverUrl = request.form['bookImage']
             description = request.form['bookDescription']
             description = description.replace('\n', '<br>')
-            bookCategory = request.form['category']
+            bookCategoryName = request.form['category']  # name
+            # print bookCategoryName
             user_id = check_user().id
 
             if bookName and bookAuthor and coverUrl and description \
-                    and bookCategory:
+                    and bookCategoryName:
+                newBookCat = getCategoreyId(bookCategoryName)
                 newBook = BookDB(
                     bookName=bookName,
                     authorName=bookAuthor,
                     coverUrl=coverUrl,
                     description=description,
-                    category=bookCategory,
+                    category_id=newBookCat.id,
                     user_id=user_id,
                 )
                 DBSession = sessionmaker(bind=engine)
@@ -163,7 +190,6 @@ def newBook():
                 session.commit()
                 return redirect(url_for('showBooks'))
             else:
-                print "add books else 5"
 
                 state = new_state()
                 return render_template(
@@ -177,8 +203,10 @@ def newBook():
         else:
             state = new_state()
             books = queryAllBooks()
+            categories = queryAllCategories()
             return render_template(
                 'main.html',
+                categories=categories,
                 books=books,
                 currentPage='main',
                 state=state,
@@ -194,8 +222,10 @@ def newBook():
     else:
         state = new_state()
         books = queryAllBooks()
+        categories = queryAllCategories()
         return render_template(
             'main.html',
+            categories=categories,
             books=books,
             currentPage='main',
             state=state,
@@ -210,11 +240,14 @@ def newBook():
 def sortBooks(category):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-    books = session.query(BookDB).filter_by(category=category).all()
+    books = session.query(BookDB).filter_by(category_id=category).all()
+    categories = queryAllCategories()
     session.close()
+
     state = new_state()
     return render_template(
         'main.html',
+        categories=categories,
         books=books,
         currentPage='main',
         error='Sorry! No Book in Database With This Genre :(',
@@ -222,22 +255,32 @@ def sortBooks(category):
         login_session=login_session)
 
 
+def populateHeadersinBase():
+    cats = queryAllCategories()
+    render_template('base.html', catList=cats)
+
+
 # To show book detail
 
-@app.route('/books/category/<string:category>/<int:bookId>/')
-def bookDetail(category, bookId):
+@app.route('/books/category/<int:category_id>/<int:bookId>/')
+def bookDetail(category_id, bookId):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
     book = session.query(BookDB).filter_by(id=bookId,
-                                           category=category).first()
+                                           category_id=category_id).first()
     session.close()
+    categories = queryAllCategories()
     state = new_state()
     if book:
-        return render_template('itemDetail.html', book=book,
-                               currentPage='detail', state=state,
+        return render_template('itemDetail.html',
+                               book=book,
+                               currentPage='detail',
+                               state=state,
                                login_session=login_session)
     else:
-        return render_template('main.html', currentPage='main',
+        return render_template('main.html',
+                               categories=categories,
+                               currentPage='main',
                                error="""No Book Found with this Category
                                and Book Id :(""",
                                state=state,
@@ -246,13 +289,13 @@ def bookDetail(category, bookId):
 
 # To edit book detail
 
-@app.route('/books/category/<string:category>/<int:bookId>/edit/',
+@app.route('/books/category/<int:category_id>/<int:bookId>/edit/',
            methods=['GET', 'POST'])
-def editBookDetails(category, bookId):
+def editBookDetails(category_id, bookId):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
     book = session.query(BookDB).filter_by(id=bookId,
-                                           category=category).first()
+                                           category_id=category_id).first()
     session.close()
     if request.method == 'POST':
 
@@ -264,7 +307,11 @@ def editBookDetails(category, bookId):
             bookAuthor = request.form['authorName']
             coverUrl = request.form['bookImage']
             description = request.form['bookDescription']
-            bookCategory = request.form['category']
+
+            bookCategoryName = request.form['category']  # name
+
+            bookCategory = getCategoreyId(bookCategoryName)
+
             user_id = check_user().id
             admin = check_admin()
             admin_id = -1  # no admin inserted
@@ -281,16 +328,20 @@ def editBookDetails(category, bookId):
                     book.coverUrl = coverUrl
                     description = description.replace('\n', '<br>')
                     book.description = description
-                    book.category = bookCategory
+                    book.category_id = bookCategory.id
                     session.add(book)
                     session.commit()
                     return redirect(url_for('bookDetail',
-                                            category=book.category,
+                                            category_id=book.category_id,
                                             bookId=book.id))
                 else:
                     state = new_state()
+                    categories = queryAllCategories()
+                    category = getCategorey(book.category_id)
                     return render_template(
                         'editItem.html',
+                        bookCategory=category,
+                        categories=categories,
                         currentPage='edit',
                         title='Edit Book Details',
                         book=book,
@@ -319,6 +370,7 @@ def editBookDetails(category, bookId):
             )
     elif book:
         state = new_state()
+        category = getCategorey(book.category_id)
         if 'provider' in login_session and login_session['provider'] \
                 != 'null':
             user_id = check_user().id
@@ -328,8 +380,12 @@ def editBookDetails(category, bookId):
                 admin_id = admin.id  # admin inserted we need to know id
             if user_id == book.user_id or user_id == admin_id:
                 book.description = book.description.replace('<br>', '\n')
+                categories = queryAllCategories()
+
                 return render_template(
                     'editItem.html',
+                    categories=categories,
+                    bookCategory=category,
                     currentPage='edit',
                     title='Edit Book Details',
                     book=book,
@@ -364,11 +420,11 @@ def editBookDetails(category, bookId):
 
 # To delete books
 
-@app.route('/books/category/<string:category>/<int:bookId>/delete/')
-def deleteBook(category, bookId):
+@app.route('/books/category/<int:category_id>/<int:bookId>/delete/')
+def deleteBook(category_id, bookId):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-    book = session.query(BookDB).filter_by(category=category,
+    book = session.query(BookDB).filter_by(category_id=category_id,
                                            id=bookId).first()
     session.close()
     state = new_state()
@@ -406,7 +462,10 @@ def deleteBook(category, bookId):
                 errorMsg='Please Login to Delete the Book!',
             )
     else:
-        return render_template('main.html', currentPage='main',
+        categories = queryAllCategories()
+        return render_template('main.html',
+                               categories=categories,
+                               currentPage='main',
                                error="""Error Deleting Book! No Book Found
                                with this Category and Book Id :(""",
                                state=state,
@@ -595,20 +654,20 @@ def booksJSON():
     return jsonify(Books=[book.serialize for book in books])
 
 
-@app.route('/books/category/<string:category>.json/')
-def bookCategoryJSON(category):
+@app.route('/books/category/<int:category_id>.json/')
+def bookCategoryJSON(category_id):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-    books = session.query(BookDB).filter_by(category=category).all()
+    books = session.query(BookDB).filter_by(category_id=category_id).all()
     session.close()
     return jsonify(Books=[book.serialize for book in books])
 
 
-@app.route('/books/category/<string:category>/<int:bookId>.json/')
-def bookJSON(category, bookId):
+@app.route('/books/category/<int:category_id>/<int:bookId>.json/')
+def bookJSON(category_id, bookId):
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-    book = session.query(BookDB).filter_by(category=category,
+    book = session.query(BookDB).filter_by(category_id=category_id,
                                            id=bookId).first()
     session.close()
     return jsonify(Book=book.serialize)
@@ -618,29 +677,24 @@ def bookJSON(category, bookId):
 def allBooksByCategoryJSON():
     DBSession = sessionmaker(bind=engine)
     session = DBSession()
-    books = session.query(BookDB).all()
-    categoriesArray = {}
-    for book in books:
-        if book.category not in categoriesArray:
-            arraOfBooks = [book.serialize]  # new
-            categoriesArray[book.category] = arraOfBooks
+    categories = session.query(Category).all()
+    category_dict = [c.serialize for c in categories]
+    for c in range(len(category_dict)):
+        books = [
+            i.serialize for i in session.query(BookDB).filter_by
+            (category_id=category_dict[c]["id"]).all()
+        ]
+        if books:
+            category_dict[c]["Books"] = books
         else:
-            categoriesArray.get(book.category).append(book.serialize)
+            category_dict[c]["Books"] = []
     session.close()
-    return jsonify(Books=categoriesArray)
+    return jsonify(Category=category_dict)
 
 
 @app.route('/catalog/categories.json/')
 def categoriesJSON():
-    DBSession = sessionmaker(bind=engine)
-    session = DBSession()
-    books = session.query(BookDB).all()
-    session.close()
-    categoriesArray = []
-    for book in books:
-        if not categoriesArray.__contains__(book.category):
-            categoriesArray.append(book.category)
-    return jsonify(categories=categoriesArray)
+    return jsonify(categories=[cat.serialize for cat in queryAllCategories()])
 
 
 if __name__ == '__main__':
