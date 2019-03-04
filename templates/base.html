@@ -68,12 +68,11 @@
       </nav>
         <span class="mdl-layout-title">Genres</span>
         <nav class="mdl-navigation">
-          <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Fiction')}}">Fiction</a>
-          <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Horror')}}">Horror</a>
-          <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Mystery')}}">Mystery</a>
-          <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Romance')}}">Romance</a>
-          <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Fantasy')}}">Fantasy</a>
-          <a class="mdl-navigation__link" href="{{url_for('sortBooks', category='Other')}}">Other</a>
+            {% for categori in categories %}
+                <a class="mdl-navigation__link" href="{{url_for('sortBooks', category=categori.id)}}">{{ categori.name }}</a>
+
+
+            {% endfor %}
         </nav>
         <span class="mdl-layout-title signInButtonTitle">Account</span>
         <nav class="mdl-navigation">
