@@ -89,3 +89,9 @@ Book By Category: `/books/category/<int:category_id>/<int:bookId>.json/`
 Categories : `/catalog/categories.json/`
     - Displays Categories 
 
+### Screenshots:
+
+![](screenshots/site1.png)
+![](screenshots/site2.png)
+![](screenshots/site3.png)
+![](screenshots/site4.png)
